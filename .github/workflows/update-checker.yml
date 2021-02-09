@@ -1,7 +1,8 @@
 name: Update Checker
 
 env:
-  REPO_URL: https://github.com/rancher/harvester-installer
+  REPO_OWN: rancher
+  REPO_NAME: harvester-installer
   REPO_BRANCH: master
 
 on:
@@ -18,7 +19,7 @@ jobs:
     - name: Get Commit Hash
       id: getHash
       run: |
-        git clone --depth 1 $REPO_URL -b $REPO_BRANCH .
+        git clone --depth 1 https://github.com/${REPO_OWN}/${REPO_NAME} -b $REPO_BRANCH .
         echo "::set-output name=commitHash::$(git rev-parse HEAD)"
 
     - name: Compare Commit Hash
