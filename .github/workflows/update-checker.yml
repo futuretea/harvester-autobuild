@@ -1,9 +1,9 @@
 name: Update Checker
 
 env:
-  REPO_OWN: rancher
+  REPO_OWN: futuretea
   REPO_NAME: harvester-installer
-  REPO_BRANCH: master
+  REPO_BRANCH: futuretea
 
 on:
   workflow_dispatch:

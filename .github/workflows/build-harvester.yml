@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
 
 env:
-  REPO_OWN: rancher
+  REPO_OWN: futuretea
   REPO_NAME: harvester-installer
-  REPO_BRANCH: master
+  REPO_BRANCH: futuretea
   TZ: Asia/Shanghai
 
 jobs:
