@@ -22,9 +22,6 @@ jobs:
       env:
         DEBIAN_FRONTEND: noninteractive
       run: |
-        echo "Prune docker, please wait ..."
-        docker system prune --volumes -a -f
-
         echo "Prune system, please wait ..."
         sudo -E apt-get -y purge \
           azure-cli \
@@ -46,44 +43,56 @@ jobs:
         sudo -E apt-get -y autoremove --purge >/dev/null 2>&1
         sudo -E apt-get clean >/dev/null 2>&1
         sudo timedatectl set-timezone "$TZ"
-        sudo mkdir -p /workdir
-        sudo chown $USER:$GROUPS /workdir
 
-    - name: Clone source code
-      working-directory: /workdir
+    - name: Get code info
+      id: info
       run: |
         df -hT $PWD
         git clone https://github.com/${REPO_OWN}/${REPO_NAME} -b $REPO_BRANCH ${REPO_NAME}
-        ln -sf /workdir/${REPO_NAME} ${GITHUB_WORKSPACE}/${REPO_NAME}
+        pushd $GITHUB_WORKSPACE/${REPO_NAME}
+        source scripts/version
+        popd
+        echo "::set-output name=artifacts_dir::${REPO_NAME}/dist/artifacts"
+        echo "::set-output name=artifacts_dir_abs::${GITHUB_WORKSPACE}/${REPO_NAME}/dist/artifacts"
+        echo "::set-output name=tag_name::$(date +"%Y.%m.%d-%H%M")-${VERSION}"
+        echo "::set-output name=base_version::${REPO_OWN}/${REPO_NAME}@${COMMIT}"
 
-
-    - name: Run make
-      id: make
+    - name: Build full iso
       run: |
         cd $GITHUB_WORKSPACE/${REPO_NAME}
         make
 
-    - name: Generate release tag
-      id: tag
+    - name: Upload full iso to Google Drive
+      id: gdrive
+      uses: futuretea/gdrive-upload-action@main
+      with:
+        filename: ${{ steps.info.outputs.artifacts_dir }}/harvester-amd64.iso
+        target: harvester-amd64.iso
+        folderId:  ${{ secrets.GDRIVE_FOLDER_ID }}
+        credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
+
+    - name: Build lite iso
       run: |
-        pushd $GITHUB_WORKSPACE/${REPO_NAME}
-        source scripts/version
-        popd
+        cd $GITHUB_WORKSPACE/${REPO_NAME}
+        HARVESTER_INSTALLER_OFFLINE_BUILD=1 make
+        mv dist/artifacts/harvester-amd64.iso dist/artifacts/harvester-amd64-lite.iso
 
-        echo "Base on ${REPO_OWN}/${REPO_NAME}@${COMMIT}" > release.txt
-        echo "::set-output name=artifacts::${GITHUB_WORKSPACE}/${REPO_NAME}/dist/artifacts"
-        echo "::set-output name=release_tag::$(date +"%Y.%m.%d-%H%M")-${VERSION}"
-        echo "::set-output name=status::success"
+    - name: Generate release info
+      env:
+        BASE_VERSION: ${{ steps.info.outputs.base_version }}
+        GDRIVE_WEB_VIEW_LINK: ${{ steps.gdrive.outputs.webViewLink }}
+      run: |
+        echo "🍻 Base on ${BASE_VERSION}" > release.txt
+        echo "🧊 Offline ISO download URL: ${GDRIVE_WEB_VIEW_LINK}" >> release.txt
 
-    - name: Upload iso to release
+    - name: Create release
       uses: softprops/action-gh-release@v1
-      if: steps.tag.outputs.status == 'success'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ steps.tag.outputs.release_tag }}
         body_path: release.txt
-        files: ${{ steps.tag.outputs.artifacts }}/*
+        tag_name: ${{ steps.info.outputs.tag_name }}
+        files: ${{ steps.info.outputs.artifacts_dir_abs }}/*
 
     - name: Delete workflow runs
       uses: GitRML/delete-workflow-runs@main
@@ -91,7 +100,7 @@ jobs:
         retain_days: 1
         keep_minimum_runs: 3
 
-    - name: Remove old Releases
+    - name: Remove old releases
       uses: dev-drprasad/delete-older-releases@v0.1.0
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
