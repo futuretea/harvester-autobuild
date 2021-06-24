@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
 
 env:
-  REPO_OWN: rancher
+  REPO_OWN: futuretea
   REPO_NAME: harvester-installer
-  REPO_BRANCH: master
+  REPO_BRANCH: box
   TZ: Asia/Shanghai
 
 jobs:
@@ -67,7 +67,7 @@ jobs:
       uses: futuretea/gdrive-upload-action@main
       with:
         filename: ${{ steps.info.outputs.artifacts_dir }}/harvester-amd64.iso
-        target: harvester-amd64.iso
+        name: harvester-amd64.iso
         folderId:  ${{ secrets.GDRIVE_FOLDER_ID }}
         credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
 
