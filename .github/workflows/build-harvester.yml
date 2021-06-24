@@ -68,6 +68,7 @@ jobs:
       with:
         filename: ${{ steps.info.outputs.artifacts_dir }}/harvester-amd64.iso
         name: harvester-amd64.iso
+        overwrite: true
         folderId:  ${{ secrets.GDRIVE_FOLDER_ID }}
         credentials: ${{ secrets.GDRIVE_CREDENTIALS }}
 
@@ -105,6 +106,6 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        keep_latest: 3
+        keep_latest: 1
         delete_tags: true
 
